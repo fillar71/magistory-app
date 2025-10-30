@@ -5,10 +5,14 @@ import axios from "axios";
 
 dotenv.config();
 const app = express();
-app.use(cors());
+
+// ✅ CORS diatur agar GitHub Pages bisa akses backend
+app.use(cors({
+  origin: "https://fillar71.github.io/magistory-frontend", // atau ganti "*" dengan URL GitHub Pages kamu
+}));
 app.use(express.json());
 
-// ✅ Generate Script dari IDE menggunakan Gemini
+// ✅ Generate Script pakai Gemini 1.5 Flash (versi terbaru)
 app.post("/api/generate-script", async (req, res) => {
   try {
     const { idea } = req.body;
@@ -17,31 +21,36 @@ app.post("/api/generate-script", async (req, res) => {
       return res.status(400).json({ error: "Ide tidak boleh kosong." });
     }
 
-    const geminiResponse = await axios.post(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "API Key Gemini belum diatur di Railway." });
+    }
+
+    const prompt = `Buatkan skrip video singkat dan menarik dengan gaya storytelling untuk ide: "${idea}". 
+Gunakan bahasa yang ringan dan engaging.`;
+
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
       {
         contents: [
           {
-            parts: [{ text: `Buatkan naskah video edukatif singkat tentang: ${idea}` }]
+            parts: [{ text: prompt }]
           }
         ]
       },
       {
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY
-        }
+        headers: { "Content-Type": "application/json" }
       }
     );
 
     const script =
-      geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Gagal menghasilkan naskah.";
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Gagal menghasilkan skrip.";
 
     res.json({ script });
   } catch (error) {
-    console.error(error.response?.data || error.message);
-    res.status(500).json({ error: "Gagal memproses permintaan." });
+    console.error("❌ Gemini API Error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Gagal memproses permintaan ke Gemini API." });
   }
 });
 
@@ -49,12 +58,15 @@ app.post("/api/generate-script", async (req, res) => {
 app.post("/api/get-videos", async (req, res) => {
   try {
     const { query } = req.body;
+    const apiKey = process.env.PEXELS_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: "API Key Pexels belum diatur di Railway." });
+    }
 
     const pexelsResponse = await axios.get(
       `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=5`,
-      {
-        headers: { Authorization: process.env.PEXELS_API_KEY }
-      }
+      { headers: { Authorization: apiKey } }
     );
 
     const videos = pexelsResponse.data.videos.map((v) => ({
@@ -65,9 +77,14 @@ app.post("/api/get-videos", async (req, res) => {
 
     res.json({ videos });
   } catch (error) {
-    console.error(error.message);
+    console.error("❌ Pexels API Error:", error.message);
     res.status(500).json({ error: "Gagal mengambil video dari Pexels." });
   }
+});
+
+// ✅ Tes koneksi backend
+app.get("/", (req, res) => {
+  res.send("Magistory Backend berjalan 🚀");
 });
 
 // ✅ Jalankan server
