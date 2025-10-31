@@ -12,38 +12,51 @@ app.use(cors({
   origin: ["https://magistory-frontend.vercel.app"],
   methods: ["GET", "POST"],
 }));
-// ✅ Generate Script (Gemini)
+// Generate Script JSON by Gemini 2.0 Flash
 app.post("/api/generate-script", async (req, res) => {
   try {
-    const { idea } = req.body;
+    const { idea, duration, aspectRatio, style } = req.body;
     if (!idea) return res.status(400).json({ error: "Ide tidak boleh kosong." });
 
-    const response = await axios.post(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-      {
-        contents: [
-          { parts: [{ text: `Buatkan naskah video singkat edukatif tentang: ${idea}` }] }
-        ]
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY,
-        },
-      }
-    );
+    const prompt = `
+Kamu adalah asisten kreator video.
+Buatkan naskah video dengan ide: "${idea}".
+Durasi total: ${duration || "60 detik"}.
+Aspect ratio: ${aspectRatio || "16:9"}.
+Gaya video: ${style || "edukatif"}.
 
-    const script =
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Gagal menghasilkan skrip.";
+Respon hanya dalam format JSON berikut:
 
-    res.json({ script });
+{
+  "judul": "judul video",
+  "adegan": [
+    {
+      "nomor_adegan": 1,
+      "durasi": "00:00-00:30",
+      "deskripsi_visual": ["keyword1","keyword2"],
+      "narasi": "narasi adegan"
+    }
+  ]
+}
+    `.trim();
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+    const gResp = await axios.post(url, {
+      contents: [{ parts: [{ text: prompt }] }]
+    });
+
+    let text = gResp.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // Hapus triple backticks dll
+    text = text.replace(/```json|```/g, "").trim();
+    const result = JSON.parse(text);
+
+    res.json(result);
   } catch (err) {
-    console.error("Error Gemini:", err.response?.data || err.message);
-    res.status(500).json({ error: "Gagal memproses permintaan." });
+    console.error("GenerateScript error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Gagal memproses permintaan ke Gemini API." });
   }
 });
-
 // ✅ Ambil video dari Pexels
 app.post("/api/get-videos", async (req, res) => {
   try {
