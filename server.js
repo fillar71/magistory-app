@@ -149,7 +149,25 @@ app.post("/api/get-videos", async (req, res) => {
     return res.status(500).json({ error: "Pexels failed", detail: err.response?.data || err.message });
   }
 });
+// ✅ Save Project ke Server
+import fs from "fs";
 
+app.post("/api/save-project", (req, res) => {
+  try {
+    const project = req.body;
+    if (!project.judul) {
+      return res.status(400).json({ error: "Judul project tidak ditemukan." });
+    }
+
+    // Simpan ke file JSON (sementara, nanti bisa ganti DB)
+    fs.writeFileSync("project.json", JSON.stringify(project, null, 2));
+    console.log("✅ Project disimpan:", project.judul);
+    res.json({ success: true, message: "Project disimpan di server." });
+  } catch (err) {
+    console.error("Gagal menyimpan project:", err);
+    res.status(500).json({ error: "Gagal menyimpan project di server." });
+  }
+});
 // ------------------------------
 // 3) Save project (store JSON)
 // ------------------------------
