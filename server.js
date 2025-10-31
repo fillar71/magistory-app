@@ -19,7 +19,7 @@ app.post("/api/generate-script", async (req, res) => {
     if (!idea) return res.status(400).json({ error: "Ide tidak boleh kosong." });
 
     const response = await axios.post(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
       {
         contents: [
           { parts: [{ text: `Buatkan naskah video singkat edukatif tentang: ${idea}` }] }
