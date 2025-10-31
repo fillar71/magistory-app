@@ -135,7 +135,7 @@ app.post("/api/get-videos", async (req, res) => {
     if (!apiKey) return res.status(500).json({ error: "PEXELS_API_KEY not set" });
 
     const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=8`;
-    const p = await axios.get(url, { headers: { Authorization: apiKey }, timeout: 15000 });
+    const p = await axios.get(url, { headers: { Authorization: apiKey }, timeout: 60000 });
     const videos = (p.data.videos || []).map(v => ({
       id: v.id,
       thumbnail: v.image,
