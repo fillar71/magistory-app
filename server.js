@@ -50,8 +50,26 @@ Gaya: ${style || "edukatif"}
       }
     );
 
-    const text = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const jsonData = JSON.parse(text.trim());
+    let text = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+// 🔥 Bersihkan hasil dari blok Markdown dan karakter aneh
+text = text
+  .replace(/```json/gi, "") // hapus pembuka ```json
+  .replace(/```/g, "")      // hapus penutup ```
+  .replace(/[\u0000-\u001F]+/g, "") // hapus karakter kontrol
+  .trim();
+
+// 🔍 Coba parse JSON, kalau gagal kirim error deskriptif
+let jsonData;
+try {
+  jsonData = JSON.parse(text);
+} catch (err) {
+  console.error("❌ Format JSON tidak valid:", text);
+  return res.status(400).json({
+    error: "Respon Gemini tidak valid JSON. Pastikan format JSON bersih.",
+    raw: text.slice(0, 300)
+  });
+}
 
     res.json(jsonData);
   } catch (err) {
