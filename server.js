@@ -63,8 +63,10 @@ Format jawaban HARUS JSON valid seperti ini tanpa tanda \`\`\` atau teks tambaha
 
     // Bersihkan hasil agar JSON valid
     const text = data.candidates[0].content.parts[0].text.trim();
-    const cleanText = text.replace(/```json|```/g, "").trim();
-
+    const cleanText = text
+  .replace(/```json|```/g, "")
+  .replace(/^[^{]*({[\s\S]*})[^}]*$/, "$1")
+  .trim();
     let jsonOutput;
     try {
       jsonOutput = JSON.parse(cleanText);
