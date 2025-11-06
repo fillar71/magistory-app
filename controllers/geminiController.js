@@ -9,20 +9,20 @@ export const generateScript = async (req, res) => {
       return res.status(400).json({ error: "Parameter 'ide' wajib diisi" });
     }
 
-    // Buat prompt yang lebih eksplisit
     const prompt = `
 Kamu adalah asisten kreatif yang membuat skrip video singkat berdasarkan ide pengguna.
-Gunakan format JSON berikut (tanpa tambahan teks lain dan tanpa blok \`\`\`json):
+Gunakan format JSON valid berikut, tanpa blok kode atau teks tambahan:
+
 {
-  "judul": "...",
+  "judul": "Judul Video",
   "total_durasi": ${durasi_total || 60},
   "adegan": [
     {
       "id": 1,
       "durasi": "00:00-00:05",
-      "narasi": "...",
-      "deskripsi_visual": "...",
-      "kata_kunci_video": "..."
+      "narasi": "Kalimat narasi pembuka",
+      "deskripsi_visual": "Deskripsi visual singkat",
+      "kata_kunci_video": "kata kunci pexels yang relevan"
     }
   ]
 }
@@ -30,7 +30,7 @@ Gunakan format JSON berikut (tanpa tambahan teks lain dan tanpa blok \`\`\`json)
 Ide video: ${ide}
 Gaya video: ${style || "edukatif"}
 Rasio aspek: ${aspect_ratio || "16:9"}
-Pastikan JSON valid.
+Pastikan output JSON valid dan tidak mengandung karakter lain.
 `;
 
     const response = await fetch(
@@ -46,28 +46,29 @@ Pastikan JSON valid.
 
     const data = await response.json();
 
-    // Ambil teks dari response
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal mendapatkan hasil";
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
-    // Bersihkan karakter tambahan di luar JSON
-    const cleanText = text
+    if (!text) {
+      console.error("Tidak ada teks dari Gemini:", data);
+      return res.status(500).json({ error: "Tidak ada respons dari Gemini." });
+    }
+
+    // Hapus ```json atau karakter asing
+    const clean = text
       .replace(/```json|```/g, "")
       .replace(/^[^{]*({[\s\S]*})[^}]*$/, "$1")
       .trim();
 
-    let parsed;
     try {
-      parsed = JSON.parse(cleanText);
-    } catch (err) {
-      console.error("⚠️ JSON parse error:", err.message);
+      const parsed = JSON.parse(clean);
+      return res.status(200).json(parsed);
+    } catch (e) {
+      console.error("❌ JSON Parse Error:", e.message);
       return res.status(500).json({
-        error: "Respons dari Gemini bukan JSON valid.",
+        error: "Respons dari Gemini bukan JSON valid",
         raw: text,
       });
     }
-
-    return res.status(200).json(parsed);
   } catch (error) {
     console.error("🔥 Error di generateScript:", error.message);
     return res.status(500).json({ error: error.message });
