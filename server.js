@@ -14,7 +14,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://magistory-frontend.vercel.app",
-      "https://magistory-frontend-nei7kyqvg-filla-ramadans-projects.vercel.app/",
+      "https://magistory-frontend-8d5tn14e6-filla-ramadans-projects.vercel.app",
     ],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
