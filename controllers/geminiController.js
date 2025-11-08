@@ -8,29 +8,28 @@ export const generateScript = async (req, res) => {
 
     const prompt = `
 Kamu adalah AI pembuat naskah video profesional.
-Buatkan skrip video berdasarkan ide berikut:
+Buatkan skrip video JSON valid berdasarkan data ini:
 - Ide: ${ide}
-- Gaya: ${style || "edukatif"}
-- Rasio Aspek: ${aspect_ratio || "16:9"}
-- Durasi Total: ${durasi_total || 60} detik
+- Gaya: ${style}
+- Rasio aspek: ${aspect_ratio}
+- Durasi total: ${durasi_total} detik
 
-Format JSON tanpa blok kode:
+Gunakan format:
 {
-  "judul": "Judul Video",
-  "total_durasi": ${durasi_total || 60},
+  "judul": "Judul video",
+  "total_durasi": ${durasi_total},
   "adegan": [
     {
       "id": 1,
       "durasi": "00:00-00:05",
       "narasi": "Kalimat narasi pembuka",
-      "deskripsi_visual": ["pemandangan", "alam", "awan"],
-      "kata_kunci_video": ["nature", "clouds", "sky"]
+      "deskripsi_visual": ["tema", "objek", "latar"],
+      "kata_kunci_video": ["keyword"]
     }
   ]
-}
-`;
+}`;
 
-    const r = await fetch(
+    const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
@@ -39,15 +38,14 @@ Format JSON tanpa blok kode:
       }
     );
 
-    const data = await r.json();
+    const data = await response.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) return res.status(500).json({ error: "Tidak ada respons dari Gemini." });
 
-    const clean = text.replace(/```json|```/g, "").replace(/^[^{]*({[\s\S]*})[^}]*$/, "$1").trim();
+    const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
-    res.json(parsed);
+    res.status(200).json(parsed);
   } catch (e) {
-    console.error("🔥 Gemini Error:", e);
     res.status(500).json({ error: e.message });
   }
 };
